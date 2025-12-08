@@ -93,23 +93,24 @@ profile_projects_app/
 ## 📸 Screenshots
 
 ### Profile Tab
-- Displays profile picture (icon)
-- Name: Yoganathan C
-- Intern ID: MT1286
-- Bio section with personal description
-- Contact information (email, phone, location)
-- Internship details (domain, duration, dates)
+Displays personal information, bio, contact details, and internship information.
+
+![Profile Tab](screenshots/profile_tab.jpg)
 
 ### Projects Tab
-- Lists all projects in card format
-- Shows project title and description
-- Empty state message when no projects exist
-- Add button to create new projects
+Lists all projects in card format with project title and description.
+
+![Projects Tab](screenshots/projects_tab.jpg)
 
 ### Add Project Dialog
-- Input fields for project title and description
-- Cancel and Add buttons
-- Form validation
+Dialog for adding new projects with input fields for title and description.
+
+![Add Project Dialog](screenshots/add_dialog.jpg)
+
+### Projects with New Entry
+Shows the updated projects list after adding a new project.
+
+![New Project Added](screenshots/new_project.jpg)
 
 ## 🔧 Building APK
 
@@ -176,8 +177,8 @@ This project is created as part of the MainCrafts Technology internship program.
 ## 📞 Contact
 
 **Yoganathan C**  
-Email: yoganathan@example.com  
-LinkedIn: [Connect on LinkedIn](https://www.linkedin.com)
+Email: iamyoganathanc@gmail.com  
+LinkedIn: [Connect on LinkedIn](https://www.linkedin.com/in/yoganathan-c/)
 
 ---
 
