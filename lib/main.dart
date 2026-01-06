@@ -1,8 +1,38 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(const MyApp());
 }
+
+class Project {
+  const Project({required this.title, required this.description});
+
+  final String title;
+  final String description;
+
+  Map<String, String> toMap() => {'title': title, 'description': description};
+
+  factory Project.fromMap(Map<String, dynamic> map) {
+    return Project(
+      title: map['title'] as String? ?? '',
+      description: map['description'] as String? ?? '',
+    );
+  }
+}
+
+const List<Project> _seedProjects = [
+  Project(
+    title: 'Weather App',
+    description: 'A Flutter app that shows weather forecasts using API',
+  ),
+  Project(
+    title: 'Todo List',
+    description: 'Task management app with local storage',
+  ),
+];
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -29,26 +59,125 @@ class ProfileProjectsApp extends StatefulWidget {
 }
 
 class _ProfileProjectsAppState extends State<ProfileProjectsApp> {
-  // List to store projects (in-memory)
-  final List<Map<String, String>> _projects = [
-    {
-      'title': 'Weather App',
-      'description': 'A Flutter app that shows weather forecasts using API',
-    },
-    {
-      'title': 'Todo List',
-      'description': 'Task management app with local storage',
-    },
-  ];
+  static const String _storageKey = 'projects';
 
-  // Add new project to the list
-  void _addProject(String title, String description) {
-    setState(() {
-      _projects.add({'title': title, 'description': description});
-    });
+  List<Project> _projects = const [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProjects();
   }
 
-  // Show dialog to add a new project
+  Future<void> _loadProjects() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? stored = prefs.getString(_storageKey);
+
+    if (stored != null) {
+      try {
+        final List<dynamic> decoded = jsonDecode(stored) as List<dynamic>;
+        final List<Project> loaded = decoded
+            .map((item) => Project.fromMap((item as Map).cast<String, dynamic>()))
+            .toList();
+
+        setState(() {
+          _projects = loaded;
+          _isLoading = false;
+        });
+        return;
+      } catch (_) {
+        // If stored data is corrupted, fall back to seeds and reset storage.
+        await prefs.remove(_storageKey);
+      }
+    }
+
+    setState(() {
+      _projects = _seedProjects;
+      _isLoading = false;
+    });
+    await _persistProjects();
+  }
+
+  Future<void> _persistProjects() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String encoded =
+        jsonEncode(_projects.map((project) => project.toMap()).toList());
+    await prefs.setString(_storageKey, encoded);
+  }
+
+  Future<void> _addProject(String title, String description) async {
+    final String trimmedTitle = title.trim();
+    final String trimmedDescription = description.trim();
+
+    if (trimmedTitle.isEmpty || trimmedDescription.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter both title and description.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _projects = [
+        ..._projects,
+        Project(title: trimmedTitle, description: trimmedDescription),
+      ];
+    });
+
+    await _persistProjects();
+  }
+
+  Future<void> _updateProject(int index, String title, String description) async {
+    final String trimmedTitle = title.trim();
+    final String trimmedDescription = description.trim();
+
+    if (trimmedTitle.isEmpty || trimmedDescription.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter both title and description.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _projects = List<Project>.from(_projects)
+        ..[index] = Project(title: trimmedTitle, description: trimmedDescription);
+    });
+
+    await _persistProjects();
+  }
+
+  Future<void> _deleteProject(int index) async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Delete project?'),
+          content: const Text('This cannot be undone.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    setState(() {
+      _projects = List<Project>.from(_projects)..removeAt(index);
+    });
+
+    await _persistProjects();
+  }
+
   void _showAddProjectDialog() {
     final TextEditingController titleController = TextEditingController();
     final TextEditingController descriptionController = TextEditingController();
@@ -58,26 +187,29 @@ class _ProfileProjectsAppState extends State<ProfileProjectsApp> {
       builder: (context) {
         return AlertDialog(
           title: const Text('Add New Project'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Project Title',
-                  border: OutlineInputBorder(),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Project Title',
+                    border: OutlineInputBorder(),
+                  ),
+                  textInputAction: TextInputAction.next,
                 ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: descriptionController,
-                decoration: const InputDecoration(
-                  labelText: 'Project Description',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Project Description',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
                 ),
-                maxLines: 3,
-              ),
-            ],
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -85,14 +217,72 @@ class _ProfileProjectsAppState extends State<ProfileProjectsApp> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
-                if (titleController.text.isNotEmpty &&
-                    descriptionController.text.isNotEmpty) {
-                  _addProject(titleController.text, descriptionController.text);
+              onPressed: () async {
+                await _addProject(titleController.text, descriptionController.text);
+                if (mounted && Navigator.canPop(context)) {
                   Navigator.pop(context);
                 }
               },
               child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showEditProjectDialog(int index, Project project) {
+    final TextEditingController titleController =
+        TextEditingController(text: project.title);
+    final TextEditingController descriptionController =
+        TextEditingController(text: project.description);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Edit Project'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Project Title',
+                    border: OutlineInputBorder(),
+                  ),
+                  textInputAction: TextInputAction.next,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Project Description',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                await _updateProject(
+                  index,
+                  titleController.text,
+                  descriptionController.text,
+                );
+                if (mounted && Navigator.canPop(context)) {
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Save'),
             ),
           ],
         );
@@ -115,14 +305,14 @@ class _ProfileProjectsAppState extends State<ProfileProjectsApp> {
             ],
           ),
         ),
-        body: TabBarView(
-          children: [
-            // Profile Tab
-            _buildProfileTab(),
-            // Projects Tab
-            _buildProjectsTab(),
-          ],
-        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : TabBarView(
+                children: [
+                  _buildProfileTab(),
+                  _buildProjectsTab(),
+                ],
+              ),
         floatingActionButton: FloatingActionButton(
           onPressed: _showAddProjectDialog,
           tooltip: 'Add Project',
@@ -132,7 +322,6 @@ class _ProfileProjectsAppState extends State<ProfileProjectsApp> {
     );
   }
 
-  // Profile Tab Widget
   Widget _buildProfileTab() {
     return SingleChildScrollView(
       child: Padding(
@@ -140,34 +329,30 @@ class _ProfileProjectsAppState extends State<ProfileProjectsApp> {
         child: Column(
           children: [
             const SizedBox(height: 20),
-            // Profile Photo
             const CircleAvatar(
               radius: 60,
               backgroundColor: Colors.blue,
               child: Icon(Icons.person, size: 60, color: Colors.white),
             ),
             const SizedBox(height: 20),
-            // Name
             const Text(
               'Yoganathan C',
               style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            // Intern ID
             const Text(
               'Intern ID: MT1286',
               style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const SizedBox(height: 30),
-            // Bio Section
             Card(
               elevation: 2,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
+                  children: const [
+                    Row(
                       children: [
                         Icon(Icons.info_outline, color: Colors.blue),
                         SizedBox(width: 8),
@@ -180,8 +365,8 @@ class _ProfileProjectsAppState extends State<ProfileProjectsApp> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    const Text(
+                    SizedBox(height: 12),
+                    Text(
                       'Flutter App Development Intern at Maincrafts Technology. Passionate about building cross-platform mobile applications and learning new technologies.',
                       style: TextStyle(fontSize: 16),
                     ),
@@ -190,7 +375,6 @@ class _ProfileProjectsAppState extends State<ProfileProjectsApp> {
               ),
             ),
             const SizedBox(height: 16),
-            // Contact Section
             Card(
               elevation: 2,
               child: Padding(
@@ -206,8 +390,7 @@ class _ProfileProjectsAppState extends State<ProfileProjectsApp> {
                           'Contact',
                           style: TextStyle(
                             fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
+                            fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -222,7 +405,6 @@ class _ProfileProjectsAppState extends State<ProfileProjectsApp> {
               ),
             ),
             const SizedBox(height: 16),
-            // Internship Details
             Card(
               elevation: 2,
               child: Padding(
@@ -287,7 +469,6 @@ class _ProfileProjectsAppState extends State<ProfileProjectsApp> {
     );
   }
 
-  // Projects Tab Widget
   Widget _buildProjectsTab() {
     return _projects.isEmpty
         ? const Center(
@@ -300,7 +481,7 @@ class _ProfileProjectsAppState extends State<ProfileProjectsApp> {
             padding: const EdgeInsets.all(16.0),
             itemCount: _projects.length,
             itemBuilder: (context, index) {
-              final project = _projects[index];
+              final Project project = _projects[index];
               return Card(
                 elevation: 3,
                 margin: const EdgeInsets.only(bottom: 16),
@@ -315,18 +496,28 @@ class _ProfileProjectsAppState extends State<ProfileProjectsApp> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              project['title']!,
+                              project.title,
                               style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
+                          IconButton(
+                            icon: const Icon(Icons.edit),
+                            tooltip: 'Edit',
+                            onPressed: () => _showEditProjectDialog(index, project),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete),
+                            tooltip: 'Delete',
+                            onPressed: () => _deleteProject(index),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        project['description']!,
+                        project.description,
                         style: const TextStyle(fontSize: 16),
                       ),
                     ],
