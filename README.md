@@ -12,7 +12,7 @@ A Flutter application demonstrating basic Flutter concepts including TabBar navi
 
 ## 📱 About The App
 
-This is Task 1 of the MainCrafts Internship program. The app is a profile and project management application with two main tabs:
+This is Task 2 of the MainCrafts Internship program. It upgrades the Task 1 profile/projects app by adding local persistence so data survives restarts. The app has two tabs:
 
 - **Profile Tab**: Displays personal information, bio, contact details, and internship information
 - **Projects Tab**: Shows a list of projects with the ability to add new ones dynamically
@@ -23,7 +23,10 @@ This is Task 1 of the MainCrafts Internship program. The app is a profile and pr
 - ✅ Profile section with personal details and internship information
 - ✅ Projects section displaying project cards using `ListView`
 - ✅ Floating Action Button to add new projects
-- ✅ Dialog for adding project details
+- ✅ Dialog for adding project details with trimming/validation
+- ✅ Local persistence with `shared_preferences` + JSON (data survives restarts)
+- ✅ Load saved data on startup with a loading indicator and corruption fallback
+- ✅ Edit and delete projects with confirmation for deletes
 - ✅ Simple state management using `setState`
 - ✅ Responsive and clean UI with Material Design
 - ✅ Card widgets for organized content display
@@ -32,6 +35,7 @@ This is Task 1 of the MainCrafts Internship program. The app is a profile and pr
 
 - **Flutter SDK**: 3.35.3
 - **Dart**: 3.9.2
+- **Persistence**: `shared_preferences` with JSON encode/decode
 - **Widgets**: Scaffold, AppBar, TabBar, TabBarView, ListView, Card, Dialog
 - **State Management**: `setState` (StatefulWidget)
 - **Layouts**: Column, Row, Padding, Container, SingleChildScrollView
@@ -138,13 +142,24 @@ The web build will be in the `build/web/` directory.
 ✅ **README File**: Comprehensive documentation  
 ✅ **APK Build**: Can be generated using `flutter build apk`  
 ✅ **Screenshots**: Can be captured from running app  
-✅ **All Requirements Met**:
-  - TabBar with two tabs (Profile & Projects)
-  - Profile tab with photo, bio, and contact
-  - Projects tab with project cards using ListView
-  - Floating Action Button
-  - Add project dialog
-  - Simple state management using setState
+✅ **All Requirements Met (Task 2)**:
+   - TabBar with Profile & Projects
+   - Add project dialog with validation
+   - Local storage via SharedPreferences (JSON) with auto-load on startup
+   - Projects persist across app restarts
+   - Edit and delete (with confirmation) + immediate persistence
+   - Simple state management using `setState`
+
+## 🧪 Testing
+
+- Unit test for JSON round-trip of projects: `flutter test`
+
+## 📝 Future Enhancements
+
+- Search and filter projects
+- Profile photo picker
+- Cloud sync/backup option
+- Categories/tags for projects
 
 ## 🎯 Skills Demonstrated
 
@@ -189,4 +204,4 @@ MSME NO: UDYAM-UP-75009604
 
 ---
 
-*Developed as Task 1 for MainCrafts Technology Flutter App Development Internship*
+*Developed as Task 2 for MainCrafts Technology Flutter App Development Internship*
